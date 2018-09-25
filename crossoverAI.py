@@ -1,20 +1,23 @@
 print("Importing modules...")
 import pandas as pd
-import config as cfg
+#import config as cfg
 import matplotlib.pyplot as plt
 from time import sleep
-import utils
+#import utils
+
 print("done.")
 
-DATA_FILE = "data/5minAAOI.csv"
+DATA_FILE = "data/60minAAOI.csv"
 sampleAt = 'close'
-fastavgsamples = 3
-slowavgsamples = 10
+fastavgsamples = 15
+slowavgsamples = 20
 shares = 5
 startmoney = 1000
 money = startmoney
 
 slowavglist, fastavglist = [],[]
+previoustradeval = None
+tradeprofits = []
 
 csvdata = pd.read_csv(DATA_FILE)
 print("Data loaded.")
@@ -56,14 +59,22 @@ def calculate():
             oldfarelpos = fastavgrelpos
         
 def buy(data, position):
-    global money
+    global money, previoustradeval, tradeprofits
     print("bought {0} shares at ${1}".format(shares, data[position]))
     money -= shares * data[position]
+    if previoustradeval != None:
+        tradeprofits.append(previoustradeval - data[position])
+        print("profit: " + str(previoustradeval - data[position]) + "\n")
+    previoustradeval = data[position]
     
 def sell(data, position):
-    global money
+    global money, previoustradeval, tradeprofits
     print("sold {0} shares at ${1}".format(shares, data[position]))
     money += shares * data[position]
+    if previoustradeval != None:
+        tradeprofits.append(data[position] - previoustradeval)
+        print("profit: " + str(data[position] - previoustradeval) + "\n")
+    previoustradeval = data[position]
         
 print("Calculating")
 calculate()
@@ -77,8 +88,9 @@ plt.plot(fastavglist, label='fast average')
 plt.legend()
 
 print("Profit: ${0}".format(money - startmoney))
+print("Profit m2: ${0}".format(sum(tradeprofits)))
 print("showing graph")
-sleep(1)
+sleep(2)
 plt.show()
 print("Goodbye.")
 
