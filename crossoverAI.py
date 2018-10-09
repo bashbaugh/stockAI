@@ -13,11 +13,12 @@ fastavgsamples = 15
 slowavgsamples = 20
 shares = 5
 startmoney = 1000
-money = startmoney
 
 slowavglist, fastavglist = [],[]
-previoustradeval = None
+bmoney = startmoney
+marketpos = 0
 tradeprofits = []
+prevtradeval = None
 
 csvdata = pd.read_csv(DATA_FILE)
 print("Data loaded.")
@@ -50,32 +51,41 @@ def calculate():
             fastavgrelpos = 1 if slowavg <= fastavg else 0
             if oldfarelpos != fastavgrelpos:
                 if fastavgrelpos == 1:
-                    buy(d, i)
+                    trade(1, d, i)
                 else:
-                    sell(d, i)
+                    trade(-1, d, i)
             oldfarelpos = fastavgrelpos
         else:
             fastavgrelpos = 1 if slowavg <= fastavg else 0
             oldfarelpos = fastavgrelpos
         
-def buy(data, position):
-    global money, previoustradeval, tradeprofits
-    print("bought {0} shares at ${1}".format(shares, data[position]))
-    money -= shares * data[position]
-    if previoustradeval != None:
-        tradeprofits.append(previoustradeval - data[position])
-        print("profit: " + str(previoustradeval - data[position]) + "\n")
-    previoustradeval = data[position]
+def trade(takeposition, data, index):
+    global bmoney, prevtradeval, marketpos, tradeprofits
+    if takeposition == 1:
+        bmoney -= shares * data[index]
+        print("\nbought {0} shares at ${1}".format(shares, data[index]))
+        if marketpos != 0:
+            profit = (prevtradeval - data[index])
+            tradprofits.append(profit)
+            print("Bought long, profit was:\n{0}".format(profit))
+        marketpos = 1
+        prevtradeval = data[index]
+    else:
+        bmoney += shares * data[index]
+        print("\nsold {0} shares at ${1}".format(shares, data[index]))
+        if marketpos != 0:
+            profit = (prevtradeval - data[index]) * -1
+            tradprofits.append(profit)
+            print("Sold short, profit was:\n{0}".format(profit))
+        marketpos = -1
+        prevtradeval = data[index]
     
-def sell(data, position):
-    global money, previoustradeval, tradeprofits
-    print("sold {0} shares at ${1}".format(shares, data[position]))
-    money += shares * data[position]
-    if previoustradeval != None:
-        tradeprofits.append(data[position] - previoustradeval)
-        print("profit: " + str(data[position] - previoustradeval) + "\n")
-    previoustradeval = data[position]
-        
+    
+#def sellshort(position, data, index):
+    #global money
+    #print("sold {0} shares at ${1}".format(shares, data[index]))
+    #money += shares * data[index]
+    
 print("Calculating")
 calculate()
 
@@ -87,8 +97,9 @@ plt.plot(slowavglist, label='slow average')
 plt.plot(fastavglist, label='fast average')
 plt.legend()
 
-print("Profit: ${0}".format(money - startmoney))
-print("Profit m2: ${0}".format(sum(tradeprofits)))
+print("Profit without short-selling: ${0}".format(bmoney - startmoney))
+finalprofit = sum(tradeprofits)
+print("Profit: ${0}".format(finalprofit))
 print("showing graph")
 sleep(2)
 plt.show()
