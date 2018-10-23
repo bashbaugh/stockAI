@@ -14,7 +14,7 @@ slowavgsamples = 20
 shares = 5
 startmoney = 1000
 
-slowavglist, fastavglist = [],[]
+slowavglist, fastavglist, tradepoints = [],[],[]
 bmoney = startmoney
 marketpos = 0
 tradeprofits = []
@@ -53,7 +53,8 @@ def calculate():
                 if fastavgrelpos == 1:
                     trade(1, d, i)
                 else:
-                    trade(-1, d, i)
+                    trade(-1, d, i) 
+                tradepoints.append(i)
             oldfarelpos = fastavgrelpos
         else:
             fastavgrelpos = 1 if slowavg <= fastavg else 0
@@ -66,7 +67,7 @@ def trade(takeposition, data, index):
         print("\nbought {0} shares at ${1}".format(shares, data[index]))
         if marketpos != 0:
             profit = (prevtradeval - data[index])
-            tradprofits.append(profit)
+            tradeprofits.append(profit)
             print("Bought long, profit was:\n{0}".format(profit))
         marketpos = 1
         prevtradeval = data[index]
@@ -75,7 +76,7 @@ def trade(takeposition, data, index):
         print("\nsold {0} shares at ${1}".format(shares, data[index]))
         if marketpos != 0:
             profit = (prevtradeval - data[index]) * -1
-            tradprofits.append(profit)
+            tradeprofits.append(profit)
             print("Sold short, profit was:\n{0}".format(profit))
         marketpos = -1
         prevtradeval = data[index]
@@ -90,9 +91,9 @@ print("Calculating")
 calculate()
 
 
-print("generating graph")
+print("\n\ngenerating graph")
 datapoints = generateDataPoints(csvdata)
-plt.plot(datapoints, label='close')
+plt.plot(datapoints, marker='*',label='close', markevery=tradepoints,  markersize=10)
 plt.plot(slowavglist, label='slow average')
 plt.plot(fastavglist, label='fast average')
 plt.legend()
