@@ -1,24 +1,28 @@
- print("Importing modules...")
+print("Importing modules...")
 import pandas as pd
 #import config as cfg
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 from time import sleep
+import numpy as np
 #import utils
 
 print("done.")
 
 DATA_FILE = "data/60minAAOI.csv"
 sampleAt = 'close'
-fastavgsamples = 15
-slowavgsamples = 20
 shares = 5
 startmoney = 1000
 
-slowavglist, fastavglist, tradepoints = [],[],[]
-bmoney = startmoney
-marketpos = 0
-tradeprofits = []
-prevtradeval = None
+slowavg_start = 1
+fastavg_start = 1
+slowavg_stop = 10
+fastavg_stop = 10
+slowavg_interval = 5
+fastavg_interval = 5
+
+X, Y, Z = [], [], []
+bmoney, marketpos, prevtradeval, tradeprofits = None, None, None, None
 
 csvdata = pd.read_csv(DATA_FILE)
 print("Data loaded.")
@@ -35,7 +39,7 @@ def generateAvg(data, position, numSamples):
         dsum += data[position + i]
     return dsum / numSamples
 
-def calculate():
+def calculate(slowavgsamples, fastavgsamples):
     fastavgrelpos = None # relative to slowavg
     oldfarelpos = None
     d = csvdata[sampleAt]
@@ -59,6 +63,56 @@ def calculate():
         else:
             fastavgrelpos = 1 if slowavg <= fastavg else 0
             oldfarelpos = fastavgrelpos
+            
+def generate3d():
+    profits = []
+    for sa in range(slowavg_start, slowavg_stop, slowavg_interval):
+        for fa in range(fastavg_start, fastavg_stop, fastavg_interval):
+            slowavgsamples = sa
+            fastavgsamples = fa
+            global bmoney, marketpos, prevtradeval, tradeprofits
+            slowavglist, fastavglist = [],[]
+            bmoney = startmoney
+            marketpos = 0
+            tradeprofits = []
+            prevtradeval = None
+            fastavgrelpos = None # relative to slowavg
+            oldfarelpos = None
+            d = csvdata[sampleAt]
+            for i in range(50):
+                slowavglist.append(None)
+                fastavglist.append(None)
+            for i in range(50, len(d)):
+                fastavg = generateAvg(d, i, fastavgsamples)
+                slowavg = generateAvg(d, i, slowavgsamples)
+                slowavglist.append(slowavg)
+                fastavglist.append(fastavg)
+                if fastavgrelpos != None:
+                    fastavgrelpos = 1 if slowavg <= fastavg else 0
+                    if oldfarelpos != fastavgrelpos:
+                        if fastavgrelpos == 1:
+                            trade(1, d, i)
+                        else:
+                            trade(-1, d, i) 
+                    oldfarelpos = fastavgrelpos
+                else:
+                    fastavgrelpos = 1 if slowavg <= fastavg else 0
+                    oldfarelpos = fastavgrelpos
+            nss_profit = (bmoney - startmoney)
+            ss_profit = sum(tradeprofits)
+            X.append(sa)
+            Y.append(fa)
+            Z.append(ss_profit)
+            
+    #slowavglist, fastavglist, tradepoints = [],[],[]
+    #bmoney = startmoney
+    #marketpos = 0
+    #tradeprofits = []
+    #prevtradeval = None
+    #Calculate()
+    #nss_profit = (bmoney - startmoney))
+    #ss_profit = sum(tradeprofits)
+    
         
 def trade(takeposition, data, index):
     global bmoney, prevtradeval, marketpos, tradeprofits
@@ -88,22 +142,19 @@ def trade(takeposition, data, index):
     #money += shares * data[index]
     
 print("Calculating")
-calculate()
+generate3d()
+X = np.asarray(X)
+Y = np.asarray(Y)
+Z = np.asarray(Z).reshape(1, 4)
+fig = plt.figure()
+ax = fig.gca(projection='3d')
+surf = ax.plot_surface(X, Y, Z,
+                       linewidth=0, antialiased=False)
 
 
-print("\n\ngenerating graph")
-datapoints = generateDataPoints(csvdata)
-plt.plot(datapoints, marker='*',label='close', markevery=tradepoints,  markersize=10)
-plt.plot(slowavglist, label='slow average')
-plt.plot(fastavglist, label='fast average')
-plt.legend()
-
-print("Profit without short-selling: ${0}".format(bmoney - startmoney))
-finalprofit = sum(tradeprofits)
-print("Profit: ${0}".format(finalprofit))
-print("showing graph")
-sleep(2)
+#print("showing graph")
+#sleep(2)
 plt.show()
-print("Goodbye.")
+#print("Goodbye.")
 
 
